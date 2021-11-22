@@ -30,6 +30,7 @@
 #include "Ethernet.h"
 #include "Dns.h"
 #include "utility/w5100.h"
+#include <errno.h>
 
 /* Start EthernetUDP socket, listening at local port PORT */
 uint8_t EthernetUDP::begin(uint16_t port)
@@ -125,6 +126,7 @@ int EthernetUDP::parsePacket()
 		return ret;
 	}
 	// There aren't any packets available
+	errno = EWOULDBLOCK;
 	return 0;
 }
 
