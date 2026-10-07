@@ -22,6 +22,11 @@
 #if defined(PIN_SPI_SS_ETHERNET_LIB)
 #define SS_PIN_DEFAULT  PIN_SPI_SS_ETHERNET_LIB
 
+// ESP32 has no PIN_SPI_SS, so the final fallback (pin 10) was used.
+// On the original ESP32, GPIO6-11 are the flash/PSRAM SPI lines; use SS (GPIO5, VSPI CS).
+#elif defined(ARDUINO_ARCH_ESP32)
+#define SS_PIN_DEFAULT  SS
+
 // MKR boards default to pin 5 for MKR ETH
 // Pins 8-10 are MOSI/SCK/MISO on MRK, so don't use pin 10
 #elif defined(USE_ARDUINO_MKR_PIN_LAYOUT) || defined(ARDUINO_SAMD_MKRZERO) || defined(ARDUINO_SAMD_MKR1000) || defined(ARDUINO_SAMD_MKRFox1200) || defined(ARDUINO_SAMD_MKRGSM1400) || defined(ARDUINO_SAMD_MKRWAN1300) || defined(ARDUINO_SAMD_MKRVIDOR4000)
@@ -89,6 +94,15 @@ uint8_t W5100Class::init(void)
 	uint8_t i;
 
 	if (initialized) return 1;
+
+#if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_IDF_TARGET_ESP32)
+	// GPIO6-11 are the flash/PSRAM SPI lines. pinMode() on them takes the pin away from
+	// the flash/PSRAM bus and corrupts PSRAM (heap) contents, so refuse to touch them.
+	if (ss_pin >= 6 && ss_pin <= 11) {
+		log_e("W5100: SS pin %u is a flash/PSRAM pin; call Ethernet.init(ss) first", ss_pin);
+		return 0;
+	}
+#endif
 
 	// Many Ethernet shields have a CAT811 or similar reset chip
 	// connected to W5100 or W5200 chips.  The W5200 will not work at
